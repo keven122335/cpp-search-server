@@ -11,6 +11,7 @@ int main() {
 		for (char ch : str_i) {
 			if (ch == '3') {
 				j++;
+				break;
 			}
 		}
 	}
