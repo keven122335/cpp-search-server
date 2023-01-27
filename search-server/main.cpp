@@ -30,6 +30,7 @@ vector<int>ReadLineWithRating() {
     int rating_size;
     cin >> rating_size;
     vector<int> ratings(rating_size, 0);
+
     for (int& rating : ratings) {
         cin >> rating;
     }
@@ -40,6 +41,7 @@ vector<int>ReadLineWithRating() {
 vector<string> SplitIntoWords(const string& text) {
     vector<string> words;
     string word;
+
     for (const char c : text) {
         if (c == ' ') {
             if (!word.empty()) {
@@ -51,6 +53,7 @@ vector<string> SplitIntoWords(const string& text) {
             word += c;
         }
     }
+
     if (!word.empty()) {
         words.push_back(word);
     }
@@ -83,9 +86,11 @@ public:
         double count_tf = 1.0 / words.size();
         vector<int> ratings;
         int s_sum_raiting = ComputeAverageRating(raitings);
+
         for (const string& word : words) {
             word_to_document_freqs_[word][document_id] += count_tf;
         }
+
         document_data_.emplace(document_id, DataDocument{
                 s_sum_raiting,
                 status
@@ -131,6 +136,7 @@ public:
                 words.push_back(plus);
             }
         }
+
         for (const string& minus : query_words.minusWords) {
             if (word_to_document_freqs_.count(minus) == 0) {
                 continue;
@@ -172,6 +178,7 @@ private:
 
     vector<string> SplitIntoWordsNoStop(const string& text) const {
         vector<string> words;
+
         for (const string& word : SplitIntoWords(text)) {
             if (!isStopWords(word)) {
                 words.push_back(word);
@@ -192,6 +199,7 @@ private:
 
     Query ParseQuery(const string& text) const {
         Query query;
+
         for (const string& word : SplitIntoWords(text)) {
             const QueryWord query_word = ParseQueryWord(word);
             if (!query_word.is_stop) {
@@ -208,6 +216,7 @@ private:
 
     static int ComputeAverageRating(const vector<int>& ratings) {
         int rating_size = ratings.size();
+
         if (ratings.empty()) {
             return 0;
         }
@@ -220,7 +229,6 @@ private:
     }
 
     template<typename Predicat>
-
     vector<Document> FindAllDocuments(const Query& query_words, Predicat predicat) const {
         vector<Document> matched_documents;
         map<int, double> document_to_relevance;
@@ -234,8 +242,8 @@ private:
 
                 document_to_relevance[document_id] += count_tf * count_idf;
             }
-
         }
+
         for (const string& minus : query_words.minusWords) {
             if (word_to_document_freqs_.count(minus) == 0) {
                 continue;
@@ -270,14 +278,17 @@ int main() {
     search_server.AddDocument(1, "пушистый кот пушистый хвост"s, DocumentStatus::ACTUAL, { 7, 2, 7 });
     search_server.AddDocument(2, "ухоженный пёс выразительные глаза"s, DocumentStatus::ACTUAL, { 5, -12, 2, 1 });
     search_server.AddDocument(3, "ухоженный скворец евгений"s, DocumentStatus::BANNED, { 9 });
+
     cout << "ACTUAL by default:"s << endl;
     for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s)) {
         PrintDocument(document);
     }
+
     cout << "BANNED:"s << endl;
     for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s, DocumentStatus::BANNED)) {
         PrintDocument(document);
     }
+
     cout << "Even ids:"s << endl;
     for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s, [](int document_id, DocumentStatus status, int rating) { return document_id % 2 == 0; })) {
         PrintDocument(document);
