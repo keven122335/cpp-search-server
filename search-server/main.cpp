@@ -281,21 +281,21 @@ void PrintDocument(const Document& document) {
 }
 int main() {
     SearchServer search_server;
-    search_server.SetStopWords("„y „r „~„p"s);
-    search_server.AddDocument(0, "„q„u„|„„z „{„€„„ „y „}„€„t„~„„z „€„Š„u„z„~„y„{"s, DocumentStatus::ACTUAL, { 8, -3 });
-    search_server.AddDocument(1, "„„…„Š„y„ƒ„„„„z „{„€„„ „„…„Š„y„ƒ„„„„z „‡„r„€„ƒ„„"s, DocumentStatus::ACTUAL, { 7, 2, 7 });
-    search_server.AddDocument(2, "„…„‡„€„w„u„~„~„„z „„v„ƒ „r„„‚„p„x„y„„„u„|„„~„„u „s„|„p„x„p"s, DocumentStatus::ACTUAL, { 5, -12, 2, 1 });
-    search_server.AddDocument(3, "„…„‡„€„w„u„~„~„„z „ƒ„{„r„€„‚„u„ˆ „u„r„s„u„~„y„z"s, DocumentStatus::BANNED, { 9 });
+    search_server.SetStopWords("ï¿½y ï¿½r ï¿½~ï¿½p"s);
+    search_server.AddDocument(0, "ï¿½qï¿½uï¿½|ï¿½ï¿½ï¿½z ï¿½{ï¿½ï¿½ï¿½ï¿½ ï¿½y ï¿½}ï¿½ï¿½ï¿½tï¿½~ï¿½ï¿½ï¿½z ï¿½ï¿½ï¿½ï¿½ï¿½uï¿½zï¿½~ï¿½yï¿½{"s, DocumentStatus::ACTUAL, { 8, -3 });
+    search_server.AddDocument(1, "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½yï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½z ï¿½{ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½yï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½z ï¿½ï¿½ï¿½rï¿½ï¿½ï¿½ï¿½ï¿½ï¿½"s, DocumentStatus::ACTUAL, { 7, 2, 7 });
+    search_server.AddDocument(2, "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½wï¿½uï¿½~ï¿½~ï¿½ï¿½ï¿½z ï¿½ï¿½ï¿½vï¿½ï¿½ ï¿½rï¿½ï¿½ï¿½ï¿½ï¿½pï¿½xï¿½yï¿½ï¿½ï¿½uï¿½|ï¿½ï¿½ï¿½~ï¿½ï¿½ï¿½u ï¿½sï¿½|ï¿½pï¿½xï¿½p"s, DocumentStatus::ACTUAL, { 5, -12, 2, 1 });
+    search_server.AddDocument(3, "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½wï¿½uï¿½~ï¿½~ï¿½ï¿½ï¿½z ï¿½ï¿½ï¿½{ï¿½rï¿½ï¿½ï¿½ï¿½ï¿½uï¿½ï¿½ ï¿½uï¿½rï¿½sï¿½uï¿½~ï¿½yï¿½z"s, DocumentStatus::BANNED, { 9 });
     cout << "ACTUAL by default:"s << endl;
-    for (const Document& document : search_server.FindTopDocuments("„„…„Š„y„ƒ„„„„z „…„‡„€„w„u„~„~„„z „{„€„„"s)) {
+    for (const Document& document : search_server.FindTopDocuments("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½yï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½z ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½wï¿½uï¿½~ï¿½~ï¿½ï¿½ï¿½z ï¿½{ï¿½ï¿½ï¿½ï¿½"s)) {
         PrintDocument(document);
     }
     cout << "BANNED:"s << endl;
-    for (const Document& document : search_server.FindTopDocuments("„„…„Š„y„ƒ„„„„z „…„‡„€„w„u„~„~„„z „{„€„„"s, DocumentStatus::BANNED)) {
+    for (const Document& document : search_server.FindTopDocuments("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½yï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½z ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½wï¿½uï¿½~ï¿½~ï¿½ï¿½ï¿½z ï¿½{ï¿½ï¿½ï¿½ï¿½"s, DocumentStatus::BANNED)) {
         PrintDocument(document);
     }
     cout << "Even ids:"s << endl;
-    for (const Document& document : search_server.FindTopDocuments("„„…„Š„y„ƒ„„„„z „…„‡„€„w„u„~„~„„z „{„€„„"s, [](int document_id, DocumentStatus status, int rating) { return document_id % 2 == 0; })) {
+    for (const Document& document : search_server.FindTopDocuments("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½yï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½z ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½wï¿½uï¿½~ï¿½~ï¿½ï¿½ï¿½z ï¿½{ï¿½ï¿½ï¿½ï¿½"s, [](int document_id, DocumentStatus status, int rating) { return document_id % 2 == 0; })) {
         PrintDocument(document);
     }
     return 0;
