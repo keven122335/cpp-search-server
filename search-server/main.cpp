@@ -97,7 +97,6 @@ public:
     }
 
     template<typename Predicat>
-
     vector<Document> FindTopDocuments(const string& raw_query, Predicat predicat) const {
         const Query query_words = ParseQuery(raw_query);
         const double EPSILON = 1e-6;
@@ -112,12 +111,12 @@ public:
         return matched_documents;
     }
 
-    vector<Document> FindTopDocuments(const string& raw_query) const {
-        return  FindTopDocuments(raw_query, [](int document_id, DocumentStatus status, int rating) { return status == DocumentStatus::ACTUAL; });
-    }
-
     vector<Document> FindTopDocuments(const string& raw_query, DocumentStatus status) const {
         return  FindTopDocuments(raw_query, [status](int document_id, DocumentStatus lhs, int rating) { return status == lhs; });
+    }
+
+    vector<Document> FindTopDocuments(const string& raw_query) const {
+        return FindTopDocuments(raw_query, DocumentStatus::ACTUAL);
     }
 
     tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const {
@@ -225,6 +224,7 @@ private:
     vector<Document> FindAllDocuments(const Query& query_words, Predicat predicat) const {
         vector<Document> matched_documents;
         map<int, double> document_to_relevance;
+
         for (const string& plus : query_words.plusWords) {
             if (word_to_document_freqs_.count(plus) == 0) {
                 continue;
@@ -246,30 +246,15 @@ private:
         }
 
         for (auto& [document_id, relevance] : document_to_relevance) {
-            if (predicat(document_id, document_data_.at(document_id).status, document_data_.at(document_id).raiting)) {
-                matched_documents.push_back({ document_id, relevance, document_data_.at(document_id).raiting });
+            const auto& document_sourch_predicat = document_data_.at(document_id);
+            if (predicat(document_id, document_sourch_predicat.status, document_sourch_predicat.raiting)) {
+                matched_documents.push_back({ document_id, relevance, document_sourch_predicat.raiting });
             }
         }
         return matched_documents;
     }
 
 };
-
-/*SearchServer CreateSearchServer() {
-    SearchServer search_server;
-    const string stop_words_joined = ReadLine();
-    const int document_count = ReadLineWithNumber();
-    search_server.SetStopWords(stop_words_joined);
-    for (int document_id = 0; document_id < document_count; ++document_id) {
-        const string document = ReadLine();
-        int status;
-        cin >> status;
-        const vector<int> ratings = ReadLineWithRating();
-        search_server.AddDocument(document_id, document, static_cast<DocumentStatus> (status), ratings);
-        ReadLine();
-    }
-    return search_server;
-}*/
 
 void PrintDocument(const Document& document) {
     cout << "{ "s
@@ -299,13 +284,3 @@ int main() {
     }
     return 0;
 }
-
-
-/*int main() {
-    const SearchServer search_server = CreateSearchServer();
-    const string query = ReadLine();
-    const DocumentStatus status = static_cast<DocumentStatus>(ReadLineWithNumber());
-    for (const Document& document : search_server.FindTopDocuments(query, status)) {
-        PrintMatchDocumentResult(document_id, words, status);
-    }
-}*/
