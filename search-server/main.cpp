@@ -9,6 +9,7 @@
 #include <numeric>
 #include <tuple>
 
+
 using namespace std;
 
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
@@ -264,34 +265,178 @@ private:
 
 };
 
-void PrintDocument(const Document& document) {
-    cout << "{ "s
-        << "document_id = "s << document.id << ", "s
-        << "relevance = "s << document.relevance << ", "s
-        << "rating = "s << document.rating
-        << " }"s << endl;
+// -------- Начало модульных тестов поисковой системы ----------
+
+template <typename T, typename U>
+void AssertEqualImpl(const T& t, const U& u, const string& t_str, const string& u_str, const string& file,
+    const string& func, unsigned line, const string& hint) {
+    if (t != u) {
+        cout << boolalpha;
+        cout << file << "("s << line << "): "s << func << ": "s;
+        cout << "ASSERT_EQUAL("s << t_str << ", "s << u_str << ") failed: "s;
+        cout << t << " != "s << u << "."s;
+        if (!hint.empty()) {
+            cout << " Hint: "s << hint;
+        }
+        cout << endl;
+        abort();
+    }
 }
+
+#define ASSERT_EQUAL(a, b) AssertEqualImpl((a), (b), #a, #b, __FILE__, __FUNCTION__, __LINE__, ""s)
+
+#define ASSERT_EQUAL_HINT(a, b, hint) AssertEqualImpl((a), (b), #a, #b, __FILE__, __FUNCTION__, __LINE__, (hint))
+
+void AssertImpl(bool value, const string& expr_str, const string& file, const string& func, unsigned line,
+    const string& hint) {
+    if (!value) {
+        cout << file << "("s << line << "): "s << func << ": "s;
+        cout << "ASSERT("s << expr_str << ") failed."s;
+        if (!hint.empty()) {
+            cout << " Hint: "s << hint;
+        }
+        cout << endl;
+        abort();
+    }
+}
+
+#define ASSERT(expr) AssertImpl(!!(expr), #expr, __FILE__, __FUNCTION__, __LINE__, ""s)
+
+#define ASSERT_HINT(expr, hint) AssertImpl(!!(expr), #expr, __FILE__, __FUNCTION__, __LINE__, (hint))
+
+template <typename T>
+void RunTestImpl(const T&, const string& t_str) {
+    cerr << t_str << " OK"s << endl;
+}
+
+#define RUN_TEST(func) RunTestImpl((func), #func)
+
+
+void TestExcludeStopWordsFromAddedDocumentContent() {
+    const int doc_id = 42;
+    const string content = "cat in the city"s;
+    const vector<int> ratings = { 1, 2, 3 };
+    {
+        SearchServer server;
+        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+        const auto found_docs = server.FindTopDocuments("in"s);
+        ASSERT_EQUAL(found_docs.size(), 1u);
+        const Document& doc0 = found_docs[0];
+        ASSERT_EQUAL(doc0.id, doc_id);
+    }
+
+    {
+        SearchServer server;
+        server.SetStopWords("in the"s);
+        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+        ASSERT_HINT(server.FindTopDocuments("in"s).empty(),
+            "Stop words must be excluded from documents"s);
+    }
+}
+
+
+void TestSerarchWithoutMinusWord() {
+    const int doc_id = 42;
+    const string content = "cat in the city"s;
+    const vector<int> ratings = { 1, 2, 3 };
+
+    SearchServer server;
+    server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+    const auto found_docs = server.FindTopDocuments("-cat"s);
+    ASSERT_EQUAL(found_docs.size(), 0);
+}
+
+void TestMatchDocument() {
+    SearchServer server;
+    server.AddDocument(1, "dog walks on street", DocumentStatus::ACTUAL, { 1,2,3 });
+    server.AddDocument(2, "cat walks around", DocumentStatus::ACTUAL, { 3,4,5 });
+    server.AddDocument(3, "cat walks on street", DocumentStatus::ACTUAL, { 5,6,7 });
+    {
+        const auto [matched, status] = server.MatchDocument("-cat", 2);
+        ASSERT_EQUAL(matched.empty(), true);
+    }
+    {
+        const auto [matched, status] = server.MatchDocument("cat", 2);
+        ASSERT_EQUAL(matched[0], "cat");
+    }
+}
+
+void TestRelevanceSort() {
+    SearchServer server;
+    server.AddDocument(1, "dog walks on street", DocumentStatus::ACTUAL, { 1,2,3 });
+    server.AddDocument(2, "cat walks around", DocumentStatus::ACTUAL, { 3,4,5 });
+    server.AddDocument(3, "cat walks on street", DocumentStatus::ACTUAL, { 5,6,7 });
+    {
+        const auto found_docs = server.FindTopDocuments("cat walks street");
+        for (int i = 1; i < static_cast<int>(found_docs.size()); i++) {
+            ASSERT(found_docs[i - 1].relevance > found_docs[i].relevance);
+        }
+    }
+}
+
+void TestComputeAverageRating() {
+    SearchServer server;
+    server.AddDocument(1, "dog walks on street", DocumentStatus::ACTUAL, { 1,2,3 });
+    server.AddDocument(2, "cat walks around", DocumentStatus::ACTUAL, { 3,4,5 });
+    server.AddDocument(3, "cat walks on street", DocumentStatus::ACTUAL, { 5,6,7 });
+    {
+        const auto found_docs = server.FindTopDocuments("dog");
+        ASSERT_EQUAL(found_docs[0].rating, (1 + 2 + 3) / 3);
+    }
+}
+
+void TestFindFilltrDocumentsPredicate() {
+    SearchServer server;
+    server.AddDocument(1, "dog walks on street", DocumentStatus::ACTUAL, { 1,2,3 });
+    server.AddDocument(2, "cat walks around", DocumentStatus::ACTUAL, { 3,4,5 });
+    server.AddDocument(3, "cat walks on street", DocumentStatus::ACTUAL, { 5,6,7 });
+    {
+        const auto found_docs = server.FindTopDocuments("cat", [](int document_id, DocumentStatus status,
+            int rating) {return document_id % 2 == 0; });
+        ASSERT_EQUAL(found_docs[0].id, 2);
+    }
+}
+
+void TestFindDocumentsBySetStatus() {
+    SearchServer server;
+    server.AddDocument(1, "dog walks on street", DocumentStatus::ACTUAL, { 1,2,3 });
+    server.AddDocument(2, "cat walks around", DocumentStatus::ACTUAL, { 3,4,5 });
+    server.AddDocument(3, "cat walks on street", DocumentStatus::ACTUAL, { 5,6,7 });
+    {
+        const auto found_docs = server.FindTopDocuments("cat");
+        ASSERT_EQUAL(found_docs[0].id, 2);
+        ASSERT_EQUAL(found_docs[1].id, 3);
+    }
+}
+
+void TestCorrectRelevance() {
+    SearchServer server;
+    server.SetStopWords("и в на"s);
+    server.AddDocument(0, "белый кот и модный ошейник"s, DocumentStatus::ACTUAL, { 8, -3 });
+    server.AddDocument(1, "пушистый кот пушистый хвост"s, DocumentStatus::ACTUAL, { 7, 2, 7 });
+    server.AddDocument(2, "ухоженный пёс выразительные глаза"s, DocumentStatus::ACTUAL, { 5, -12, 2, 1 });
+    server.AddDocument(3, "ухоженный скворец евгений"s, DocumentStatus::BANNED, { 9 });
+    const auto found_docs = server.FindTopDocuments("пушистый ухоженный кот"s);
+    double a = found_docs[0].relevance;
+
+    ASSERT_EQUAL(found_docs[0].relevance, a);
+
+}
+// -------- Конец модульных тестов поисковой системы ----------
+
+void TestSearchServer() {
+    RUN_TEST(TestExcludeStopWordsFromAddedDocumentContent);
+    RUN_TEST(TestSerarchWithoutMinusWord);
+    RUN_TEST(TestMatchDocument);
+    RUN_TEST(TestRelevanceSort);
+    RUN_TEST(TestComputeAverageRating);
+    RUN_TEST(TestFindFilltrDocumentsPredicate);
+    RUN_TEST(TestFindDocumentsBySetStatus);
+    RUN_TEST(TestCorrectRelevance);
+}
+
 int main() {
-    SearchServer search_server;
-    search_server.SetStopWords("и в на"s);
-    search_server.AddDocument(0, "белый кот и модный ошейник"s, DocumentStatus::ACTUAL, { 8, -3 });
-    search_server.AddDocument(1, "пушистый кот пушистый хвост"s, DocumentStatus::ACTUAL, { 7, 2, 7 });
-    search_server.AddDocument(2, "ухоженный пёс выразительные глаза"s, DocumentStatus::ACTUAL, { 5, -12, 2, 1 });
-    search_server.AddDocument(3, "ухоженный скворец евгений"s, DocumentStatus::BANNED, { 9 });
+    TestSearchServer();
 
-    cout << "ACTUAL by default:"s << endl;
-    for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s)) {
-        PrintDocument(document);
-    }
-
-    cout << "BANNED:"s << endl;
-    for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s, DocumentStatus::BANNED)) {
-        PrintDocument(document);
-    }
-
-    cout << "Even ids:"s << endl;
-    for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s, [](int document_id, DocumentStatus status, int rating) { return document_id % 2 == 0; })) {
-        PrintDocument(document);
-    }
-    return 0;
+    cout << "Search server testing finished"s << endl;
 }
