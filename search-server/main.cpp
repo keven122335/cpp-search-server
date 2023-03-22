@@ -335,7 +335,7 @@ void TestExcludeStopWordsFromAddedDocumentContent() {
 }
 
 
-void TestSerarchWithoutMinusWord() {
+void TestSearchWithoutMinusWord() {
     const int doc_id = 42;
     const string content = "cat in the city"s;
     const vector<int> ratings = { 1, 2, 3 };
@@ -377,15 +377,17 @@ void TestRelevanceSort() {
 void TestComputeAverageRating() {
     SearchServer server;
     server.AddDocument(1, "dog walks on street", DocumentStatus::ACTUAL, { 1,2,3 });
-    server.AddDocument(2, "cat walks around", DocumentStatus::ACTUAL, { 3,4,5 });
-    server.AddDocument(3, "cat walks on street", DocumentStatus::ACTUAL, { 5,6,7 });
+    server.AddDocument(2, "cat walks around", DocumentStatus::ACTUAL, { -3,-4,-5 });
+    server.AddDocument(3, "cat walks on street", DocumentStatus::ACTUAL, { -5,6,-7 });
     {
-        const auto found_docs = server.FindTopDocuments("dog");
+        const auto found_docs = server.FindTopDocuments("dog and cat");
         ASSERT_EQUAL(found_docs[0].rating, (1 + 2 + 3) / 3);
+        ASSERT_EQUAL(found_docs[1].rating, (-3 - 4 - 5) / 3);
+        ASSERT_EQUAL(found_docs[2].rating, (-5 + 6 - 7) / 3);
     }
 }
 
-void TestFindFilltrDocumentsPredicate() {
+void TestFindFilterDocumentsPredicate() {
     SearchServer server;
     server.AddDocument(1, "dog walks on street", DocumentStatus::ACTUAL, { 1,2,3 });
     server.AddDocument(2, "cat walks around", DocumentStatus::ACTUAL, { 3,4,5 });
@@ -400,41 +402,64 @@ void TestFindFilltrDocumentsPredicate() {
 void TestFindDocumentsBySetStatus() {
     SearchServer server;
     server.AddDocument(1, "dog walks on street", DocumentStatus::ACTUAL, { 1,2,3 });
-    server.AddDocument(2, "cat walks around", DocumentStatus::ACTUAL, { 3,4,5 });
-    server.AddDocument(3, "cat walks on street", DocumentStatus::ACTUAL, { 5,6,7 });
+    server.AddDocument(2, "cat walks around", DocumentStatus::IRRELEVANT, { 3,4,5 });
+    server.AddDocument(3, "cat walks on street", DocumentStatus::BANNED, { 5,6,7 });
+    server.AddDocument(4, "dog walks on street", DocumentStatus::REMOVED, { 7,8, 9 });
     {
-        const auto found_docs = server.FindTopDocuments("cat");
+        const auto found_docs = server.FindTopDocuments("dog", DocumentStatus::ACTUAL);
+        ASSERT_EQUAL(found_docs[0].id, 1);
+    }
+    {
+
+
+        const auto found_docs = server.FindTopDocuments("cat", DocumentStatus::IRRELEVANT);
         ASSERT_EQUAL(found_docs[0].id, 2);
-        ASSERT_EQUAL(found_docs[1].id, 3);
+    }
+    {
+
+        const auto found_docs = server.FindTopDocuments("cat", DocumentStatus::BANNED);
+        ASSERT_EQUAL(found_docs[0].id, 3);
+    }
+    {
+
+        const auto found_docs = server.FindTopDocuments("dog", DocumentStatus::REMOVED);
+        ASSERT_EQUAL(found_docs[0].id, 4);
     }
 }
 
 void TestCorrectRelevance() {
+    const double EPSILON = 1e-6;
     SearchServer server;
-    server.SetStopWords("и в на"s);
-    server.AddDocument(0, "белый кот и модный ошейник"s, DocumentStatus::ACTUAL, { 8, -3 });
-    server.AddDocument(1, "пушистый кот пушистый хвост"s, DocumentStatus::ACTUAL, { 7, 2, 7 });
-    server.AddDocument(2, "ухоженный пёс выразительные глаза"s, DocumentStatus::ACTUAL, { 5, -12, 2, 1 });
-    server.AddDocument(3, "ухоженный скворец евгений"s, DocumentStatus::BANNED, { 9 });
-    const auto found_docs = server.FindTopDocuments("пушистый ухоженный кот"s);
-    double a = found_docs[0].relevance;
+    server.AddDocument(0, "dog walks on street"s, DocumentStatus::ACTUAL, { 8, -3 }); //relevance = 0.274653
+    server.AddDocument(1, "cat walks around"s, DocumentStatus::ACTUAL, { 7, 2, 7 }); //relevance = 0.135155
+    server.AddDocument(2, "cat walks on street"s, DocumentStatus::ACTUAL, { 9 }); //relevance = 0.101366
+    const auto found_docs = server.FindTopDocuments("dog and cat"s);
 
-    ASSERT_EQUAL(found_docs[0].relevance, a);
+    ASSERT(abs(found_docs[0].relevance - 0.274653) < EPSILON);
+    ASSERT(abs(found_docs[1].relevance - 0.135155) < EPSILON);
+    ASSERT(abs(found_docs[2].relevance - 0.101366) < EPSILON);
 
+}
+void TestAddDocuments() {
+    SearchServer server;
+    server.AddDocument(0, "dog walks on street"s, DocumentStatus::ACTUAL, { 1, 2, 3 });
+    server.AddDocument(1, "cat walks around", DocumentStatus::ACTUAL, { 4, 5, 6 });
+    server.AddDocument(2, "cat walks on street", DocumentStatus::ACTUAL, { 6, 7, 8 });
+    ASSERT_EQUAL(server.GetDocumentCount(), 3);
 }
 // -------- Конец модульных тестов поисковой системы ----------
 
 void TestSearchServer() {
     RUN_TEST(TestExcludeStopWordsFromAddedDocumentContent);
-    RUN_TEST(TestSerarchWithoutMinusWord);
+    RUN_TEST(TestSearchWithoutMinusWord);
     RUN_TEST(TestMatchDocument);
     RUN_TEST(TestRelevanceSort);
     RUN_TEST(TestComputeAverageRating);
-    RUN_TEST(TestFindFilltrDocumentsPredicate);
+    RUN_TEST(TestFindFilterDocumentsPredicate);
     RUN_TEST(TestFindDocumentsBySetStatus);
     RUN_TEST(TestCorrectRelevance);
+    RUN_TEST(TestAddDocuments);
 }
-
 int main() {
     TestSearchServer();
 
