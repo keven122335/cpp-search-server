@@ -81,14 +81,6 @@ enum class DocumentStatus {
 
 class SearchServer {
 public:
-    explicit SearchServer(const string& text) {
-        for (const string& word : SplitIntoWords(text)) {
-            if (!IsValidWord(word)) {
-                throw invalid_argument("Стоп слова содержат спецсимволы символы"s);
-            }
-            stop_words_.insert(word);
-        }
-    }
 
     template <typename StringCollection>
     explicit SearchServer(const StringCollection& stop_words) {
@@ -101,6 +93,10 @@ public:
             }
         }
     }
+
+    explicit SearchServer(const string& text)
+        :SearchServer(SplitIntoWords(text)) {};
+
 
     void AddDocument(int document_id, const string& document, DocumentStatus status, const vector<int>& raitings) {
         const vector<string> words = SplitIntoWordsNoStop(document);
@@ -124,6 +120,8 @@ public:
                 s_sum_raiting,
                 status
             });
+
+        documentId_index.push_back(document_id);
     }
 
     int GetDocumentCount() const {
@@ -132,9 +130,7 @@ public:
 
     template<typename Predicat>
     vector<Document> FindTopDocuments(const string& raw_query, Predicat predicat) const {
-        if (!correct(raw_query) || !IsValidWord(raw_query)) {
-            throw invalid_argument("Ошибка в поисковом запросе"s);
-        }
+
         const Query query_words = ParseQuery(raw_query);
         const double EPSILON = 1e-6;
 
@@ -160,10 +156,6 @@ public:
     tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const {
         const Query query_words = ParseQuery(raw_query);
         vector<string> words;
-
-        if (!correct(raw_query) || !IsValidWord(raw_query)) {
-            throw invalid_argument("Ошибка в поисковом запросе"s);
-        }
 
         for (const string& plus : query_words.plusWords) {
             if (word_to_document_freqs_.count(plus) == 0) {
@@ -191,11 +183,11 @@ public:
     }
 
     int GetDocumentId(int index) const {
-        if (index < 0 || index > static_cast<int> (document_data_.size() - 1)) {
-            throw out_of_range("id документа в недопустимом диапозоне s");
+        if (documentId_index.at(index) < 0 || documentId_index.at(index) > GetDocumentCount() - 1) {
+            throw out_of_range("id документа в недопустимом диапозоне "s);
         }
         else {
-            return index;
+            return documentId_index[index];
         }
     }
 
@@ -219,6 +211,7 @@ private:
     map<string, map<int, double>> word_to_document_freqs_;
     set<string> stop_words_;
     map<int, DataDocument> document_data_;
+    vector<int> documentId_index;
 
     static bool IsValidWord(const string& word) {
         return none_of(word.begin(), word.end(), [](char c) {
@@ -252,6 +245,7 @@ private:
     }
 
     QueryWord ParseQueryWord(string text) const {
+
         bool is_minus = false;
 
         if (text[0] == '-') {
@@ -263,6 +257,13 @@ private:
 
     Query ParseQuery(const string& text) const {
         Query query;
+
+        if (!correct(text)) {
+            throw invalid_argument("Поисковый запрос имеет недопустимые символы"s);
+        }
+        if (!IsValidWord(text)) {
+            throw invalid_argument("Ошибка в поисковом запросе"s);
+        }
 
         for (const string& word : SplitIntoWords(text)) {
             const QueryWord query_word = ParseQueryWord(word);
@@ -344,7 +345,6 @@ int main() {
         const auto documents = search_server.FindTopDocuments("--пушистый"s);
         for (const Document& document : documents) {
             PrintDocument(document);
-
         }
     }
     catch (const invalid_argument& e) {
