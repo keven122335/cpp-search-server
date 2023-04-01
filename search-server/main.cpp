@@ -97,7 +97,6 @@ public:
     explicit SearchServer(const string& text)
         :SearchServer(SplitIntoWords(text)) {};
 
-
     void AddDocument(int document_id, const string& document, DocumentStatus status, const vector<int>& raitings) {
         const vector<string> words = SplitIntoWordsNoStop(document);
         double count_tf = 1.0 / words.size();
