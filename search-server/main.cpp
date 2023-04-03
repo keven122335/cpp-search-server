@@ -85,10 +85,12 @@ public:
     template <typename StringCollection>
     explicit SearchServer(const StringCollection& stop_words) {
         for (const string& stop_word : stop_words) {
+            const vector<string> words = SplitIntoWords(stop_word);
+
+            if (!all_of(words.cbegin(), words.cend(), IsValidWord)) {
+                throw invalid_argument("Стоп слова имеет недопустимые символы"s);
+            }
             for (const string& word : SplitIntoWords(stop_word)) {
-                if (!IsValidWord(word)) {
-                    throw invalid_argument("Стоп слова имеет недопустимые символы"s);
-                }
                 stop_words_.insert(word);
             }
         }
@@ -96,6 +98,7 @@ public:
 
     explicit SearchServer(const string& text)
         :SearchServer(SplitIntoWords(text)) {};
+
 
     void AddDocument(int document_id, const string& document, DocumentStatus status, const vector<int>& raitings) {
         const vector<string> words = SplitIntoWordsNoStop(document);
@@ -182,12 +185,7 @@ public:
     }
 
     int GetDocumentId(int index) const {
-        if (documentId_index.at(index) < 0 || documentId_index.at(index) > GetDocumentCount() - 1) {
-            throw out_of_range("id документа в недопустимом диапозоне "s);
-        }
-        else {
-            return documentId_index[index];
-        }
+        return documentId_index.at(index);
     }
 
 private:
