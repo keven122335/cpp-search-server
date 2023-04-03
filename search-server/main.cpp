@@ -83,22 +83,17 @@ class SearchServer {
 public:
 
     template <typename StringCollection>
-    explicit SearchServer(const StringCollection& stop_words) {
-        for (const string& stop_word : stop_words) {
-            const vector<string> words = SplitIntoWords(stop_word);
+    explicit SearchServer(const StringCollection& stop_words)
+        : stop_words_(MakeUniqueNonEmptyStrings(stop_words)) {
 
-            if (!all_of(words.cbegin(), words.cend(), IsValidWord)) {
-                throw invalid_argument("Стоп слова имеет недопустимые символы"s);
-            }
-            for (const string& word : SplitIntoWords(stop_word)) {
-                stop_words_.insert(word);
-            }
+        if (!all_of(stop_words_.cbegin(), stop_words_.cend(), IsValidWord)) {
+            throw invalid_argument("Стоп слова имеет недопустимые символы"s);
+
         }
     }
 
     explicit SearchServer(const string& text)
         :SearchServer(SplitIntoWords(text)) {};
-
 
     void AddDocument(int document_id, const string& document, DocumentStatus status, const vector<int>& raitings) {
         const vector<string> words = SplitIntoWordsNoStop(document);
@@ -209,6 +204,18 @@ private:
     set<string> stop_words_;
     map<int, DataDocument> document_data_;
     vector<int> documentId_index;
+
+    template<typename StringContainer>
+    set<string> MakeUniqueNonEmptyStrings(const StringContainer& strings) {
+        set<string> words;
+
+        for (const string& word : strings) {
+            if (!word.empty()) {
+                words.insert(word);
+            }
+        }
+        return words;
+    }
 
     static bool IsValidWord(const string& word) {
         return none_of(word.begin(), word.end(), [](char c) {
