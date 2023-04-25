@@ -72,21 +72,6 @@
             });
     }
 
-    bool SearchServer::IsCorrectWord(const std::string& word) const {
-        if (word.empty()) {
-            return false;
-        }
-        if (word.back() == '-') {
-            return false;
-        }
-        for (int i = 0; i < word.size() - 1; ++i) {
-            if (word[i] == '-' && word[i + 1] == '-') {
-                return false;
-            };
-        }
-        return true;
-    }
-
     bool SearchServer::isStopWords(const std::string& word) const {
         return stop_words_.count(word);
     }
@@ -104,24 +89,26 @@
 
     SearchServer::QueryWord SearchServer::ParseQueryWord(std::string text) const {
 
+        if (!IsValidWord(text)) {
+            throw std::invalid_argument("Ошибка в поисковом запросе"s);
+        }
+
         bool is_minus = false;
 
         if (text[0] == '-') {
             is_minus = true;
             text = text.substr(1);
         }
+
+        if (text.empty() || text[0] == '-') {
+            throw std::invalid_argument("Поисковый запрос имеет недопустимые символы"s);
+        }
+
         return { text, is_minus, isStopWords(text) };
     }
 
     SearchServer::Query SearchServer::ParseQuery(const std::string& text) const {
         SearchServer::Query query;
-
-        if (!IsCorrectWord(text)) {
-            throw std::invalid_argument("Поисковый запрос имеет недопустимые символы"s);
-        }
-        if (!IsValidWord(text)) {
-            throw std::invalid_argument("Ошибка в поисковом запросе"s);
-        }
 
         for (const std::string& word : SplitIntoWords(text)) {
             const SearchServer::QueryWord query_word = ParseQueryWord(word);

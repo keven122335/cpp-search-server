@@ -81,8 +81,6 @@ private:
 
     static bool IsValidWord(const std::string& word);
 
-    bool IsCorrectWord(const std::string& word) const;
-
     bool isStopWords(const std::string& word) const;
 
     std::vector<std::string> SplitIntoWordsNoStop(const std::string& text) const;
