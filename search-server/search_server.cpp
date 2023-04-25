@@ -5,15 +5,18 @@
         double count_tf = 1.0 / words.size();
         std::vector<int> ratings;
         int s_sum_raiting = ComputeAverageRating(raitings);
-        if (document_id < 0)
+        if (document_id < 0) {
             throw std::invalid_argument("Документ не был добавлен, так как его id отрицательный"s);
-
-        if (document_data_.count(document_id))
+        }
+            
+        if (document_data_.count(document_id)) {
             throw std::invalid_argument("Документ не был добавлен, так как его id совпадает с уже имеющимся"s);
+        }
 
-        if (!IsValidWord(document))
+        if (!IsValidWord(document)) {
             throw std::invalid_argument("Документ не был добавлен, так как содержит спецсимволы"s);
-
+        }
+          
         for (const std::string& word : words) {
 
             word_to_document_freqs_[word][document_id] += count_tf;
@@ -69,12 +72,17 @@
             });
     }
 
-    bool SearchServer::correct(const std::string& word) const {
-        for (int i = 0; i <= word.size() - 1; ++i) {
-            if ((word[i] == '-' && word[i + 1] == '-') || (word[i] == '-' && word[i + 1] == ' ') || word[word.size() - 1] == '-') {
+    bool SearchServer::IsCorrectWord(const std::string& word) const {
+        if (word.empty()) {
+            return false;
+        }
+        if (word.back() == '-') {
+            return false;
+        }
+        for (int i = 0; i < word.size() - 1; ++i) {
+            if (word[i] == '-' && word[i + 1] == '-') {
                 return false;
-            }
-
+            };
         }
         return true;
     }
@@ -108,7 +116,7 @@
     SearchServer::Query SearchServer::ParseQuery(const std::string& text) const {
         SearchServer::Query query;
 
-        if (!correct(text)) {
+        if (!IsCorrectWord(text)) {
             throw std::invalid_argument("Поисковый запрос имеет недопустимые символы"s);
         }
         if (!IsValidWord(text)) {

@@ -2,7 +2,7 @@
 
 int RequestQueue::GetNoResultRequests() const {
     return std::count_if(requests_.begin(), requests_.end(), static_cast<bool (*)(const QueryResult & lhs)>([](const QueryResult& lhs) {
-        return lhs.documents_.empty();
+        return lhs.document_empty;
         }));
 }
 
